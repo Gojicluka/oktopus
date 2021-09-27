@@ -1,5 +1,4 @@
 import MainWindow;
-from typing import BinaryIO
 from PyQt5 import QtWidgets,QtCore
 from PyQt5.QtGui import QWindow;
 from PyQt5.QtWidgets import QApplication,QMainWindow;
@@ -40,21 +39,24 @@ class BuySell():
 
     #Updates symbols when combobox selected item is changed or the new pair is added
     def updateSymbols(ui,config):
-        pair = ui.comboBoxPair.currentText();
-        #find the matching symbols in a pair
-        matchingSymbols = [s for s in config.symbols if s in pair];  
-        #change the order of the mathing pairs for displaying
-        if len(matchingSymbols)>1:
-            if pair.find(matchingSymbols[0]) != 0:
-                pom = matchingSymbols[0]
-                matchingSymbols[0] = matchingSymbols[1];
-                matchingSymbols[1] = pom;    
-            config.currentSymbol1 = matchingSymbols[0];
-            config.currentSymbol2 = matchingSymbols[1];
-            config.currentPair = ui.comboBoxPair.currentText();
-            BuySell.updateSymbolLabels(ui,matchingSymbols[0],matchingSymbols[1],config);
-        else:
-            MainWindow.MainWindow.createErrorBox(ui,"The pair doesn't exist","Please delete the pair.")
+        try: 
+            pair = ui.comboBoxPair.currentText();
+            #find the matching symbols in a pair
+            matchingSymbols = [s for s in config.symbols if s in pair];  
+            #change the order of the mathing pairs for displaying
+            if len(matchingSymbols)>1:
+                if pair.find(matchingSymbols[0]) != 0:
+                    pom = matchingSymbols[0]
+                    matchingSymbols[0] = matchingSymbols[1];
+                    matchingSymbols[1] = pom;    
+                config.currentSymbol1 = matchingSymbols[0];
+                config.currentSymbol2 = matchingSymbols[1];
+                config.currentPair = ui.comboBoxPair.currentText();
+                BuySell.updateSymbolLabels(ui,matchingSymbols[0],matchingSymbols[1],config);
+            else:
+                MainWindow.MainWindow.createErrorBox(ui,"The pair doesn't exist","Please delete the pair.")
+        except Exception as ex:
+            ui.console.append(f"Exception thrown at BuySell.updateSymbols() : \n{ex}")
     
     #initialises functions for the sliders
     def sliderSetup(ui,config):
@@ -128,99 +130,107 @@ class BuySell():
         return -1
     
     def calculateBuy(ui,config,clientIndex,percent,finalPrice,amount):   
-        amountBeingSpent=0;
-        if ui.comboBoxAccountMode.currentText()== "Spot":
-            if float(config.clientSymbol2Avalible[clientIndex]) != 0:
-                if clientIndex == 0:percent = (finalPrice/float(config.clientSymbol2Avalible[clientIndex]))*100; 
-                else: 
-                    amountBeingSpent = ((float(config.clientSymbol2Avalible[clientIndex])/100)*percent);
-                    amount = amountBeingSpent/config.currentPairPrice;
-            else: 
-                if clientIndex == 0: percent = 0;
-                else: amountBeingSpent = 0;
-
-        elif ui.comboBoxAccountMode.currentText()== "Cross":
-            indexOfAsset = BuySell.findDictionaryValue(config.clientCrossMarginPortfolios[clientIndex],"asset",config.currentSymbol2);
-            if indexOfAsset == -1: 
-                if clientIndex == 0: percent = 0;
-                else: amountBeingSpent = 0;
-            else: 
-                if clientIndex == 0: 
-                    if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0 and finalPrice!=0:
-                        percent = (finalPrice/float(config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free']))*100;
-                    else : percent = 0;
-                else:
-                    if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0:
-                        amountBeingSpent = ((float(config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'])/100)*percent);
-                        amount = amountBeingSpent/config.currentPairPrice;
+        try:
+            amountBeingSpent=0;
+            if ui.comboBoxAccountMode.currentText()== "Spot":
+                if float(config.clientSymbol2Avalible[clientIndex]) != 0:
+                    if clientIndex == 0:percent = (finalPrice/float(config.clientSymbol2Avalible[clientIndex]))*100; 
                     else: 
-                        amountBeingSpent = 0
-                        amount = 0
-
-        elif ui.comboBoxAccountMode.currentText()== "Isolated":
-            indexOfAsset = BuySell.findDictionaryValue(config.clientIsolatedMarginPortfolios[clientIndex],"asset",config.currentSymbol2);
-            if indexOfAsset == -1: 
-                if clientIndex == 0: percent = 0;
-                else: amountBeingSpent = 0;
-            else: 
-                if clientIndex == 0:
-                    if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0 and finalPrice!=0:
-                        percent = (finalPrice/float(config.clientIsolatedMarginPortfolios[clientIndex][indexOfAsset]['free']))*100;
-                    else:
-                        percent = 0;
-                else:
-                    if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0:
-                        amountBeingSpent = ((float(config.clientIsolatedMarginPortfolios[clientIndex][indexOfAsset]['free'])/100)*percent);
+                        amountBeingSpent = ((float(config.clientSymbol2Avalible[clientIndex])/100)*percent);
                         amount = amountBeingSpent/config.currentPairPrice;
+                else: 
+                    if clientIndex == 0: percent = 0;
+                    else: amountBeingSpent = 0;
+
+            elif ui.comboBoxAccountMode.currentText()== "Cross":
+                indexOfAsset = BuySell.findDictionaryValue(config.clientCrossMarginPortfolios[clientIndex],"asset",config.currentSymbol2);
+                if indexOfAsset == -1: 
+                    if clientIndex == 0: percent = 0;
+                    else: amountBeingSpent = 0;
+                else: 
+                    if clientIndex == 0: 
+                        if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0 and finalPrice!=0:
+                            percent = (finalPrice/float(config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free']))*100;
+                        else : percent = 0;
                     else:
-                        amountBeingSpent = 0
-                        amount = 0
-        
-        return [percent,amountBeingSpent,amount];
+                        if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0:
+                            amountBeingSpent = ((float(config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'])/100)*percent);
+                            amount = amountBeingSpent/config.currentPairPrice;
+                        else: 
+                            amountBeingSpent = 0
+                            amount = 0
+
+            elif ui.comboBoxAccountMode.currentText()== "Isolated":
+                indexOfAsset = BuySell.findDictionaryValue(config.clientIsolatedMarginPortfolios[clientIndex],"asset",config.currentSymbol2);
+                if indexOfAsset == -1: 
+                    if clientIndex == 0: percent = 0;
+                    else: amountBeingSpent = 0;
+                else: 
+                    if clientIndex == 0:
+                        if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0 and finalPrice!=0:
+                            percent = (finalPrice/float(config.clientIsolatedMarginPortfolios[clientIndex][indexOfAsset]['free']))*100;
+                        else:
+                            percent = 0;
+                    else:
+                        if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0:
+                            amountBeingSpent = ((float(config.clientIsolatedMarginPortfolios[clientIndex][indexOfAsset]['free'])/100)*percent);
+                            amount = amountBeingSpent/config.currentPairPrice;
+                        else:
+                            amountBeingSpent = 0
+                            amount = 0
+            
+            return [percent,amountBeingSpent,amount];
+        except Exception as ex:
+            ui.console.append(f"Exception thrown at BuySell.calculateBuy() : \n{ex}")
+            return ["error","error","error"]
 
     def calculateSell(ui,config,clientIndex,percent,finalPrice,amount):
-        amountBeingSold =0;
-        if ui.comboBoxAccountMode.currentText()== "Spot":
-            if float(config.clientSymbol1Avalible[clientIndex]) != 0:
-                if clientIndex == 0:percent = (amount/float(config.clientSymbol1Avalible[clientIndex]))*100;
-                else: amountBeingSold = (float(config.clientSymbol1Avalible[clientIndex])/100)*percent;
-            else: 
-                if clientIndex == 0: percent = 0;
-                else: amountBeingSold = 0;
-
-            
-        elif ui.comboBoxAccountMode.currentText()== "Cross":
-            indexOfAsset = BuySell.findDictionaryValue(config.clientCrossMarginPortfolios[clientIndex],"asset",config.currentSymbol1);
-            if indexOfAsset == -1: 
-                if clientIndex == 0: percent = 0;
-                else: amountBeingSold = 0;
-            else: 
-                if clientIndex == 0:
-                    if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0 and amount!=0:
-                        percent = (amount/float(config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free']))*100;
-                    else: percent  = 0;
-                else:
-                    if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0:
-                        amountBeingSold = (float(config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'])/100)*percent;
-                    else: 
-                        amountBeingSold = 0;
-        elif ui.comboBoxAccountMode.currentText()== "Isolated":
-            indexOfAsset = BuySell.findDictionaryValue(config.clientIsolatedMarginPortfolios[clientIndex],"asset",config.currentSymbol1);
-            if indexOfAsset == -1: 
-                if clientIndex == 0: percent = 0;
-                else: amountBeingSold = 0;
-            else: 
-                if clientIndex == 0:
-                    if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0 and amount !=0:
-                        percent = (amount/float(config.clientIsolatedMarginPortfolios[clientIndex][indexOfAsset]['free']))*100;
-                    else: 
-                        percent = 0;
-                else:
-                    if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0: 
-                        amountBeingSold = (float(config.clientIsolatedMarginPortfolios[clientIndex][indexOfAsset]['free'])/100)*percent;
+        try:
+            amountBeingSold =0;
+            if ui.comboBoxAccountMode.currentText()== "Spot":
+                if float(config.clientSymbol1Avalible[clientIndex]) != 0:
+                    if clientIndex == 0:percent = (amount/float(config.clientSymbol1Avalible[clientIndex]))*100;
+                    else: amountBeingSold = (float(config.clientSymbol1Avalible[clientIndex])/100)*percent;
+                else: 
+                    if clientIndex == 0: percent = 0;
                     else: amountBeingSold = 0;
-        
-        return [percent,amountBeingSold];
+
+                
+            elif ui.comboBoxAccountMode.currentText()== "Cross":
+                indexOfAsset = BuySell.findDictionaryValue(config.clientCrossMarginPortfolios[clientIndex],"asset",config.currentSymbol1);
+                if indexOfAsset == -1: 
+                    if clientIndex == 0: percent = 0;
+                    else: amountBeingSold = 0;
+                else: 
+                    if clientIndex == 0:
+                        if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0 and amount!=0:
+                            percent = (amount/float(config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free']))*100;
+                        else: percent  = 0;
+                    else:
+                        if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0:
+                            amountBeingSold = (float(config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'])/100)*percent;
+                        else: 
+                            amountBeingSold = 0;
+            elif ui.comboBoxAccountMode.currentText()== "Isolated":
+                indexOfAsset = BuySell.findDictionaryValue(config.clientIsolatedMarginPortfolios[clientIndex],"asset",config.currentSymbol1);
+                if indexOfAsset == -1: 
+                    if clientIndex == 0: percent = 0;
+                    else: amountBeingSold = 0;
+                else: 
+                    if clientIndex == 0:
+                        if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0 and amount !=0:
+                            percent = (amount/float(config.clientIsolatedMarginPortfolios[clientIndex][indexOfAsset]['free']))*100;
+                        else: 
+                            percent = 0;
+                    else:
+                        if config.clientCrossMarginPortfolios[clientIndex][indexOfAsset]['free'] != 0: 
+                            amountBeingSold = (float(config.clientIsolatedMarginPortfolios[clientIndex][indexOfAsset]['free'])/100)*percent;
+                        else: amountBeingSold = 0;
+            
+            return [percent,amountBeingSold];
+        except Exception as ex:
+            ui.console.append(f"Exception thrown at BuySell.calculateSell() : \n{ex}")
+            return ["error","error"]
 #Class for items from tab widgets
 class Limit():
     def setup(ui,config):
@@ -228,64 +238,69 @@ class Limit():
         ui.buttonLimitSell.clicked.connect(lambda:Limit.order(ui,config,"sell"));
 
     def order(ui,config,action):
-        percent = 0;
-        price = float(ui.lineEditLimitPrice.text());
-        amount = float(ui.lineEditLimitAmount.text());
-        finalPrice = price * amount;
-        for clientIndex,client in  enumerate(config.clients):
-            if config.userAccountsScrollArea.checkBoxes[clientIndex].isChecked() == True:
-                if action == "buy":
-                    #percent = (finalPrice/float(config.clientSymbol2Avalible[0]))*100
-                    calculateBuy = BuySell.calculateBuy(ui,config,clientIndex,percent,finalPrice,amount)
-                    percent = calculateBuy[0];
-                    amountBeingSpent = calculateBuy[1];
-                    amount = calculateBuy[2];
-                    
-                    if clientIndex ==0: amount = float(ui.lineEditLimitAmount.text())
-
-                    if 0<percent<=100:  
-                        params = {"symbol":config.currentPair,"side": SIDE_BUY,"type":ORDER_TYPE_LIMIT,"timeInForce":TIME_IN_FORCE_GTC,
-                            "quantity":amount,"price":price};
-
-                        if  ui.comboBoxAccountMode.currentText()== "Isolated":
-                            params['isIsolated'] = "TRUE";
-
-                        if False:
-                            if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.create_order(**params)
-                            elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
-                                    order = client.create_margin_order(**params)
-                            if "clientOrderId" in order:
-                                ui.console.append("Succesfull order");
-                            else:
-                                ui.console.append("Error i think?");
-                    else:
-                        MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
-                        break; 
-                if action == "sell":
-                    #percent = (finalPrice/float(config.clientSymbol2Avalible[0]))*100
-                    calculateBuy = BuySell.calculateSell(ui,config,clientIndex,percent,finalPrice,amount)
-                    percent = calculateBuy[0];
-                    amountBeingSold = calculateBuy[1];
-                    
-                    if clientIndex ==0: amountBeingSold = float(ui.lineEditLimitAmount.text())
-
-                    if 0<percent<=100:  
-                        params = {"symbol":config.currentPair,"side": SIDE_SELL,"type":ORDER_TYPE_LIMIT,"timeInForce":TIME_IN_FORCE_GTC,
-                            "quantity":amount,"price":price};
-                        if  ui.comboBoxAccountMode.currentText()== "Isolated":
-                            params['isIsolated'] = "TRUE";
-                        if False:
-                            if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.create_order(**params)
-                            elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
-                                order = client.create_margin_order(**params)
+        try: 
+            percent = 0;
+            price = float(ui.lineEditLimitPrice.text());
+            amount = float(ui.lineEditLimitAmount.text());
+            finalPrice = price * amount;
+            for clientIndex,client in  enumerate(config.clients):
+                if config.userAccountsScrollArea.checkBoxes[clientIndex].isChecked() == True:
+                    if action == "buy":
+                        #percent = (finalPrice/float(config.clientSymbol2Avalible[0]))*100
+                        calculateBuy = BuySell.calculateBuy(ui,config,clientIndex,percent,finalPrice,amount)
+                        if calculateBuy[0] != "error":
+                            percent = calculateBuy[0];
+                            amountBeingSpent = calculateBuy[1];
+                            amount = calculateBuy[2];
                             
-                            if "clientOrderId" in order:
-                                ui.console.append("Succesfull order");
+                            if clientIndex ==0: amount = float(ui.lineEditLimitAmount.text())
+
+                            if 0<percent<=100:  
+                                params = {"symbol":config.currentPair,"side": SIDE_BUY,"type":ORDER_TYPE_LIMIT,"timeInForce":TIME_IN_FORCE_GTC,
+                                    "quantity":amount,"price":price};
+
+                                if  ui.comboBoxAccountMode.currentText()== "Isolated":
+                                    params['isIsolated'] = "TRUE";
+
+                                if False:
+                                    if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.create_order(**params)
+                                    elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
+                                            order = client.create_margin_order(**params)
+                                    if "clientOrderId" in order:
+                                        ui.console.append("Succesfull order");
+                                    else:
+                                        ui.console.append("Error i think?");
                             else:
-                                ui.console.append("Error i think?");
-                    else:
-                        MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
-                        break; 
+                                MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
+                                break; 
+                    if action == "sell":
+                        #percent = (finalPrice/float(config.clientSymbol2Avalible[0]))*100
+                        calculateSell = BuySell.calculateSell(ui,config,clientIndex,percent,finalPrice,amount)
+                        if calculateSell[0] !="error":
+                            percent = calculateSell[0];
+                            amountBeingSold = calculateSell[1];
+                            
+                            if clientIndex ==0: amountBeingSold = float(ui.lineEditLimitAmount.text())
+
+                            if 0<percent<=100:  
+                                params = {"symbol":config.currentPair,"side": SIDE_SELL,"type":ORDER_TYPE_LIMIT,"timeInForce":TIME_IN_FORCE_GTC,
+                                    "quantity":amount,"price":price};
+                                if  ui.comboBoxAccountMode.currentText()== "Isolated":
+                                    params['isIsolated'] = "TRUE";
+                                if False:
+                                    if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.create_order(**params)
+                                    elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
+                                        order = client.create_margin_order(**params)
+                                    
+                                    if "clientOrderId" in order:
+                                        ui.console.append("Succesfull order");
+                                    else:
+                                        ui.console.append("Error i think?");
+                            else:
+                                MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
+                                break; 
+        except Exception as ex:
+            ui.console.append(f"Exception thrown at Limit.order() : \n{ex}")
 
 
 class Market():
@@ -294,80 +309,85 @@ class Market():
         ui.buttonMarketSell.clicked.connect(lambda:Market.order(ui,config,"sell"));
 
     def order(ui,config,action):
-        percent = 0;
-    
-        for clientIndex,client in  enumerate(config.clients):
-            if config.userAccountsScrollArea.checkBoxes[clientIndex].isChecked() == True:
-                if action == "buy":
-                    if ui.lineEditMarketAmountBuy.text() =="" or ui.lineEditMarketAmountBuyTotal.text()=="":
-                        MainWindow.MainWindow.createErrorBox(ui,"Empty fields!","")
-                    else:
-                        amount = float(ui.lineEditMarketAmountBuy.text());
-                        finalPrice = float(config.currentPairPrice)*amount;
-                        
-                        calculateBuy = BuySell.calculateBuy(ui,config,clientIndex,percent,finalPrice,amount)
-                        percent = calculateBuy[0];
-                        amountBeingSpent = calculateBuy[1];
-                        amount = calculateBuy[2];
-
-                        if clientIndex ==0: amountBeingSpent = float(ui.lineEditMarketAmountBuyTotal.text())
-                        print(percent);
-                        #check if the percentage is good
-                        if 0<percent<=100:  
-                            if  ui.comboBoxAccountMode.currentText()== "Spot":params = {"symbol":config.currentPair};
-                            elif  ui.comboBoxAccountMode.currentText()== "Cross":
-                                params = {"symbol":config.currentPair,"side":SIDE_BUY,"type":ORDER_TYPE_MARKET}
-                            elif  ui.comboBoxAccountMode.currentText()== "Isolated":
-                                params = {"symbol":config.currentPair,"side":SIDE_BUY,"type":ORDER_TYPE_MARKET,"isIsolated":"TRUE"}                
-                            # if config.marketBuyMode =="total":
-                            # else: params['quantity']=amount;
-                            params['quoteOrderQty']=amountBeingSpent;
-                            if False:
-                                if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.order_market_buy(**params)
-                                elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
-                                    order = client.create_margin_order(**params)
-                                if "clientOrderId" in order:
-                                    ui.console.append("Succesfull order");
-                                else:
-                                    ui.console.append("Error i think?");
+        try:
+            percent = 0;
+        
+            for clientIndex,client in  enumerate(config.clients):
+                if config.userAccountsScrollArea.checkBoxes[clientIndex].isChecked() == True:
+                    if action == "buy":
+                        if ui.lineEditMarketAmountBuy.text() =="" or ui.lineEditMarketAmountBuyTotal.text()=="":
+                            MainWindow.MainWindow.createErrorBox(ui,"Empty fields!","")
                         else:
-                            MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
-                            break;  
-    
-                if action == "sell":
-                    if ui.lineEditMarketAmountSell.text() =="" or ui.lineEditMarketAmountSellTotal.text()=="":
-                        MainWindow.MainWindow.createErrorBox(ui,"Empty fields!","")
-                    else:
-                        amount = float(ui.lineEditMarketAmountSell.text());
-                        finalPrice = float(config.currentPairPrice)*amount;
-                        
-                        calculateBuy = BuySell.calculateSell(ui,config,clientIndex,percent,finalPrice,amount)
-                        percent = calculateBuy[0];
-                        amountBeingSold = calculateBuy[1];
+                            amount = float(ui.lineEditMarketAmountBuy.text());
+                            finalPrice = float(config.currentPairPrice)*amount;
+                            
+                            calculateBuy = BuySell.calculateBuy(ui,config,clientIndex,percent,finalPrice,amount)
+                            if calculateBuy[0]!="error":
+                                percent = calculateBuy[0];
+                                amountBeingSpent = calculateBuy[1];
+                                amount = calculateBuy[2];
 
-
-                        if clientIndex ==0: amountBeingSold = float(ui.lineEditMarketAmountSell.text())
-
-                        if 0<percent<=100:
-                            if False:
-                                if  ui.comboBoxAccountMode.currentText()== "Spot":
-                                    params = {"symbol":config.currentPair,"quantity":amountBeingSold};
-                                    order = client.order_market_sell(**params)
-                                elif  ui.comboBoxAccountMode.currentText()== "Cross": 
-                                    params = {"symbol":config.currentPair,"side":SIDE_SELL,"type":ORDER_TYPE_MARKET,"quantity":amountBeingSold};
-                                    order = client.create_margin_order(**params)
-                                elif  ui.comboBoxAccountMode.currentText()== "Isolated": 
-                                    params = {"symbol":config.currentPair,"side":SIDE_SELL,"type":ORDER_TYPE_MARKET,"quantity":amountBeingSold,"isIsolated":"True"};
-                                    order = client.create_margin_order(**params)
-
-                                if "clientOrderId" in order:
-                                    ui.console.append("Succesfull order");
+                                if clientIndex ==0: amountBeingSpent = float(ui.lineEditMarketAmountBuyTotal.text())
+                                print(percent);
+                                #check if the percentage is good
+                                if 0<percent<=100:  
+                                    if  ui.comboBoxAccountMode.currentText()== "Spot":params = {"symbol":config.currentPair};
+                                    elif  ui.comboBoxAccountMode.currentText()== "Cross":
+                                        params = {"symbol":config.currentPair,"side":SIDE_BUY,"type":ORDER_TYPE_MARKET}
+                                    elif  ui.comboBoxAccountMode.currentText()== "Isolated":
+                                        params = {"symbol":config.currentPair,"side":SIDE_BUY,"type":ORDER_TYPE_MARKET,"isIsolated":"TRUE"}                
+                                    # if config.marketBuyMode =="total":
+                                    # else: params['quantity']=amount;
+                                    params['quoteOrderQty']=amountBeingSpent;
+                                    if False:
+                                        if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.order_market_buy(**params)
+                                        elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
+                                            order = client.create_margin_order(**params)
+                                        if "clientOrderId" in order:
+                                            ui.console.append("Succesfull order");
+                                        else:
+                                            ui.console.append("Error i think?");
                                 else:
-                                    ui.console.append("Error i think?");
+                                    MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
+                                    break;  
+        
+                    if action == "sell":
+                        if ui.lineEditMarketAmountSell.text() =="" or ui.lineEditMarketAmountSellTotal.text()=="":
+                            MainWindow.MainWindow.createErrorBox(ui,"Empty fields!","")
                         else:
-                            MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol1}")
-                            break;
-        pass;
+                            amount = float(ui.lineEditMarketAmountSell.text());
+                            finalPrice = float(config.currentPairPrice)*amount;
+                            
+                            calculateSell = BuySell.calculateSell(ui,config,clientIndex,percent,finalPrice,amount)
+                            if calculateSell[0] != "error":
+                                percent = calculateSell[0];
+                                amountBeingSold = calculateSell[1];
+
+
+                                if clientIndex ==0: amountBeingSold = float(ui.lineEditMarketAmountSell.text())
+
+                                if 0<percent<=100:
+                                    if False:
+                                        if  ui.comboBoxAccountMode.currentText()== "Spot":
+                                            params = {"symbol":config.currentPair,"quantity":amountBeingSold};
+                                            order = client.order_market_sell(**params)
+                                        elif  ui.comboBoxAccountMode.currentText()== "Cross": 
+                                            params = {"symbol":config.currentPair,"side":SIDE_SELL,"type":ORDER_TYPE_MARKET,"quantity":amountBeingSold};
+                                            order = client.create_margin_order(**params)
+                                        elif  ui.comboBoxAccountMode.currentText()== "Isolated": 
+                                            params = {"symbol":config.currentPair,"side":SIDE_SELL,"type":ORDER_TYPE_MARKET,"quantity":amountBeingSold,"isIsolated":"True"};
+                                            order = client.create_margin_order(**params)
+
+                                        if "clientOrderId" in order:
+                                            ui.console.append("Succesfull order");
+                                        else:
+                                            ui.console.append("Error i think?");
+                                else:
+                                    MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol1}")
+                                    break;
+        except Exception as ex:
+            ui.console.append(f"Exception thrown at Market.order() : \n{ex}")
+        
 
 class StopLimit():
     def setup(ui,config):
@@ -375,64 +395,68 @@ class StopLimit():
         ui.buttonStopLimitSell.clicked.connect(lambda:StopLimit.order(ui,config,"sell"));
 
     def order(ui,config,action):
-
-        percent = 0;
-        stop = float(ui.lineEditStopLimitStop.text())
-        price = float(ui.lineEditStopLimitPrice.text());
-        amount = float(ui.lineEditStopLimitAmount.text());
-        finalPrice = price * amount;
-        for clientIndex,client in  enumerate(config.clients):
-            if config.userAccountsScrollArea.checkBoxes[clientIndex].isChecked() == True:
-                if action == "buy":
-                    #percent = (finalPrice/float(config.clientSymbol2Avalible[0]))*100
-                    calculateBuy = BuySell.calculateBuy(ui,config,clientIndex,percent,finalPrice,amount)
-                    percent = calculateBuy[0];
-                    amountBeingSpent = calculateBuy[1];
-                    amount = calculateBuy[2];
-                    
-                    if clientIndex ==0: amount = float(ui.lineEditStopLimitAmount.text())
-
-                    if 0<percent<=100:  
-                        params = {"symbol":config.currentPair,"side": SIDE_BUY,"type":ORDER_TYPE_STOP_LOSS_LIMIT,"timeInForce":TIME_IN_FORCE_GTC,
-                            "quantity":amount,"price":price,"stopPrice":stop};
-
-                        if  ui.comboBoxAccountMode.currentText()== "Isolated":
-                            params['isIsolated'] = "TRUE";
-
-                        if False:
-                            if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.create_order(**params)
-                            elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
-                                    order = client.create_margin_order(**params)
-                            if "clientOrderId" in order:
-                                ui.console.append("Succesfull order");
-                            else:
-                                ui.console.append("Error i think?");
-                    else:
-                        MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
-                        break; 
-                if action == "sell":
-                    #percent = (finalPrice/float(config.clientSymbol2Avalible[0]))*100
-                    calculateBuy = BuySell.calculateSell(ui,config,clientIndex,percent,finalPrice,amount)
-                    percent = calculateBuy[0];
-                    amountBeingSold = calculateBuy[1];
-                    
-                    if clientIndex ==0: amountBeingSold = float(ui.lineEditStopLimitAmount.text())
-
-                    if 0<percent<=100:  
-                        params = {"symbol":config.currentPair,"side": SIDE_SELL,"type":ORDER_TYPE_STOP_LOSS_LIMIT,"timeInForce":TIME_IN_FORCE_GTC,
-                            "quantity":amount,"price":price,"stopPrice":stop};
-
-                        if  ui.comboBoxAccountMode.currentText()== "Isolated":
-                            params['isIsolated'] = "TRUE";
-                        if False:
-                            if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.create_order(**params)
-                            elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
-                                    order = client.create_margin_order(**params)
+        try:
+            percent = 0;
+            stop = float(ui.lineEditStopLimitStop.text())
+            price = float(ui.lineEditStopLimitPrice.text());
+            amount = float(ui.lineEditStopLimitAmount.text());
+            finalPrice = price * amount;
+            for clientIndex,client in  enumerate(config.clients):
+                if config.userAccountsScrollArea.checkBoxes[clientIndex].isChecked() == True:
+                    if action == "buy":
+                        #percent = (finalPrice/float(config.clientSymbol2Avalible[0]))*100
+                        calculateBuy = BuySell.calculateBuy(ui,config,clientIndex,percent,finalPrice,amount)
+                        if calculateBuy[0] == "error":
+                            percent = calculateBuy[0];
+                            amountBeingSpent = calculateBuy[1];
+                            amount = calculateBuy[2];
                             
-                            if "clientOrderId" in order:
-                                ui.console.append("Succesfull order");
+                            if clientIndex ==0: amount = float(ui.lineEditStopLimitAmount.text())
+
+                            if 0<percent<=100:  
+                                params = {"symbol":config.currentPair,"side": SIDE_BUY,"type":ORDER_TYPE_STOP_LOSS_LIMIT,"timeInForce":TIME_IN_FORCE_GTC,
+                                    "quantity":amount,"price":price,"stopPrice":stop};
+
+                                if  ui.comboBoxAccountMode.currentText()== "Isolated":
+                                    params['isIsolated'] = "TRUE";
+
+                                if False:
+                                    if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.create_order(**params)
+                                    elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
+                                            order = client.create_margin_order(**params)
+                                    if "clientOrderId" in order:
+                                        ui.console.append("Succesfull order");
+                                    else:
+                                        ui.console.append("Error i think?");
                             else:
-                                ui.console.append("Error i think?");
-                    else:
-                        MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
-                        break; 
+                                MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
+                                break; 
+                    if action == "sell":
+                        #percent = (finalPrice/float(config.clientSymbol2Avalible[0]))*100
+                        calculateSell = BuySell.calculateSell(ui,config,clientIndex,percent,finalPrice,amount)
+                        if calculateSell != "error":
+                            percent = calculateSell[0];
+                            amountBeingSold = calculateSell[1];
+                            
+                            if clientIndex ==0: amountBeingSold = float(ui.lineEditStopLimitAmount.text())
+
+                            if 0<percent<=100:  
+                                params = {"symbol":config.currentPair,"side": SIDE_SELL,"type":ORDER_TYPE_STOP_LOSS_LIMIT,"timeInForce":TIME_IN_FORCE_GTC,
+                                    "quantity":amount,"price":price,"stopPrice":stop};
+
+                                if  ui.comboBoxAccountMode.currentText()== "Isolated":
+                                    params['isIsolated'] = "TRUE";
+                                if False:
+                                    if  ui.comboBoxAccountMode.currentText()== "Spot":order = client.create_order(**params)
+                                    elif  ui.comboBoxAccountMode.currentText()== "Cross" or ui.comboBoxAccountMode.currentText()== "Isolated":
+                                            order = client.create_margin_order(**params)
+                                    
+                                    if "clientOrderId" in order:
+                                        ui.console.append("Succesfull order");
+                                    else:
+                                        ui.console.append("Error i think?");
+                            else:
+                                MainWindow.MainWindow.createErrorBox(ui,"An error has occured",f"You don't have enough {config.currentSymbol2}")
+                                break; 
+        except Exception as ex:
+            ui.console.append(f"Exception thrown at StopLimit.order() : \n{ex}")

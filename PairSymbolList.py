@@ -30,23 +30,26 @@ class PairSymbolList():
             self.ui.label.setText( "Symbol list");
     
     def submit(self):
-        #Updating the config file
-        with open('config.ini') as fp:
-            config = configparser.ConfigParser();
-            config.read_file(fp);
-            config.set("pairs","pairs" if self.action == "pair" else "selectedSymbols",str(self.ui.textEdit.toPlainText().splitlines()).replace('\'','"'));
-            with open('config.ini',"w") as fp2:
-                config.write(fp2);
-        #updating confing in memory
-        if self.action == "pair":
-            self.config.pairs = self.ui.textEdit.toPlainText().splitlines()
-            self.updateElementsPair();
-        else:
-            self.config.selectedSymbols = self.ui.textEdit.toPlainText().splitlines()
-            self.updateElementsSymbol();
+        try: 
+            #Updating the config file
+            with open('config.ini') as fp:
+                config = configparser.ConfigParser();
+                config.read_file(fp);
+                config.set("pairs","pairs" if self.action == "pair" else "selectedSymbols",str(self.ui.textEdit.toPlainText().splitlines()).replace('\'','"'));
+                with open('config.ini',"w") as fp2:
+                    config.write(fp2);
+            #updating confing in memory
+            if self.action == "pair":
+                self.config.pairs = self.ui.textEdit.toPlainText().splitlines()
+                self.updateElementsPair();
+            else:
+                self.config.selectedSymbols = self.ui.textEdit.toPlainText().splitlines()
+                self.updateElementsSymbol();
 
-        
-        self.app.close();
+            
+            self.app.close();
+        except Exception as ex:
+            self.mainWindowUi.console.append(f"Exception thrown at OpenOrders.createTables() : \n{ex}")
 
     def updateElementsPair(self):
         buySell.BuySell.comboBoxSetup(self.mainWindowUi,self.config);

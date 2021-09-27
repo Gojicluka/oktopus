@@ -2,23 +2,25 @@ pyuic5 -x ui.ui -o ui.py
 
 pyuic5 -x forms/uifiles/pairsymbollist.ui -o forms/pairsymbollist.py
 
-multiproccessuj openOrdere mozda?
-
+multiproccessuj openOrdere mozda
 probaj da ugasis socket
 
+thread safety za try catch blockover
+ideja je da svaki thread ima svoju promenjivu koja ima poruke koje salje taj thread i onda Helper thread da ih sve sastavi
+ili da thread emituje signal
+
+tu i tamo jos try catch blockova
+
+Ideje:
+informisi korisnika kada se promeni portfolio 
+
+Todo:
+thread koji loguje consolu u fajl
 kada kliknes lineedit treba da se zaustavi updatovanje
 
+Memo: 
 quoteOrderQty zbog toga mozda ne radi margin order za market
-
-slideri ne rade na limit i stop limit
 
 try i catch blockovi
 
 komentari!!!!
-
-custom funkcija za % ordere
- def get_max_position_available():
-    to_use = float(exchange.fetch_balance().get('USDT').get('free'))
-    price = float(exchange.fetchTicker('BTC/USDT').get('last'))
-    decide_position_to_use = to_use / price
-    return decide_position_to_use

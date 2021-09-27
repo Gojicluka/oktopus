@@ -1,11 +1,6 @@
-
-from buySellTextBoxes import BuySellTextBoxes
-from portfolio import PortfolioThread, portfolioScrollArea
 from PyQt5.QtWidgets import QLabel, QMainWindow;
 from PyQt5 import QtGui, QtWidgets;
-from PyQt5 import QtCore;
-from PyQt5.QtGui import QDoubleValidator
-from datetime import datetime;
+
 
 #Custom modules
 from ui import Ui_MainWindow;
@@ -14,8 +9,9 @@ from openOrders import openOrdersThread;
 from config import Config;
 from PairSymbolList import PairSymbolList;
 from buySell import BuySell
-from fetchPrice import  fetchPriceAlt;
-
+from fetchPrice import FetchPriceAlt;
+from buySellTextBoxes import BuySellTextBoxes
+from portfolio import PortfolioThread, portfolioScrollArea
 from portfolioTable import portfolioTab
 from buySellTextBoxes import BuySellTextBoxes;
 '''
@@ -49,17 +45,17 @@ class MainWindow(QMainWindow):
     def threadInit(self):
         #open order thread setup
         self.openOrdersThread = openOrdersThread();
-        self.openOrdersThread.setup(self.config);
-        self.openOrdersThread.output[object,int].connect(lambda podaci,tableIndex: openOrders.processOpenOrders(self.ui,self.config,podaci,tableIndex));
+        self.openOrdersThread.setup(self.config,self.ui);
+        self.openOrdersThread.output[object,int,str].connect(lambda podaci,tableIndex,type: openOrders.processOpenOrders(self.ui,self.config,podaci,tableIndex,type));
         self.openOrdersThread.deleteRow[object,int].connect(lambda podatak,tableIndex: openOrders.deleteRow(self.ui,self.config,podatak,tableIndex));
         self.openOrdersThread.filledChanged[object,int].connect(lambda podaci,tableIndex: openOrders.filledChanged(self.ui,self.config,podaci,tableIndex));
         #fetch price thread setup
-        self.fetchPriceThread = fetchPriceAlt();
-        self.fetchPriceThread.setup(self.config);
+        self.fetchPriceThread = FetchPriceAlt();
+        self.fetchPriceThread.setup(self.config,self.ui);
         self.fetchPriceThread.output[str].connect(lambda podaci: self.updatePairPrice(podaci));
 
         self.portfolioThread = PortfolioThread();
-        self.portfolioThread.setup(self.config);
+        self.portfolioThread.setup(self.config,self.ui);
         self.portfolioThread.output[object,object,float,int].connect(
             lambda symbol1price,symbol2price,totalBtc,clientIndex:
                  portfolioScrollArea.updateItems(symbol1price,symbol2price,totalBtc,clientIndex,self.config));

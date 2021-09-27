@@ -3,7 +3,6 @@ from PyQt5 import QtCore;
 from PyQt5 import QtWidgets,QtGui,QtCore;
 import asyncio
 
-from binance import client;
 
 
 #update
@@ -13,9 +12,10 @@ class PortfolioThread(QThread):
     def __init__(self, parent = None):
         QtCore.QThread.__init__(self, parent);
 
-    def setup(self,config):
+    def setup(self,config,ui):
         self.start();
         self.config = config;
+        self.ui = ui
     def __del__(self):    
         self.wait()
     def run(self):
@@ -27,67 +27,70 @@ class PortfolioThread(QThread):
     '''
     async def portfolioFetching(self,config):
         while True:
-            for clientIndex,client in enumerate(config.clients):
-                symbol1AvalibleCrossMargin = 0;
-                symbol2AvalibleCrossMargin = 0;
-                symbol1AvalibleIsolatedMargin = 0;
-                symbol2AvalibleIsolatedMargin = 0;
-                balances = client.get_account()['balances'];
-                config.weight +=10;
-                spotTrimmedList = [];
-                for i,item in enumerate(balances):
-                    if config.currentSymbol1 == item['asset']:symbol1AvalibleSpot = float(item['free']);
-                    if config.currentSymbol2 == item['asset']:symbol2AvalibleSpot = float(item['free']);
-                    if float(item['free']) != 0: 
-                        spotTrimmedList.append(item)
-                        
-                #calculate btc from spot account since there is no function for doing that
-                gettotalbtc = PortfolioThread.getTotalBtc(client,config,spotTrimmedList);
-                totalBtc = gettotalbtc[0];
-                pairPrices = gettotalbtc[1];
+            try: 
+                for clientIndex,client in enumerate(config.clients):
+                    symbol1AvalibleCrossMargin = 0;
+                    symbol2AvalibleCrossMargin = 0;
+                    symbol1AvalibleIsolatedMargin = 0;
+                    symbol2AvalibleIsolatedMargin = 0;
+                    balances = client.get_account()['balances'];
+                    config.weight +=10;
+                    spotTrimmedList = [];
+                    for i,item in enumerate(balances):
+                        if config.currentSymbol1 == item['asset']:symbol1AvalibleSpot = float(item['free']);
+                        if config.currentSymbol2 == item['asset']:symbol2AvalibleSpot = float(item['free']);
+                        if float(item['free']) != 0: 
+                            spotTrimmedList.append(item)
+                            
+                    #calculate btc from spot account since there is no function for doing that
+                    gettotalbtc = PortfolioThread.getTotalBtc(client,config,spotTrimmedList,self.ui);
+                    totalBtc = gettotalbtc[0];
+                    pairPrices = gettotalbtc[1];
 
-                #Updating the weight of the requests (10 for the get_account call and 2 for the get_symbol_ticker() in the totalBtc section)
-                config.weight +=2;
-                #updating SPOT 
-                self.tableOutput.emit(spotTrimmedList,"Spot",clientIndex,pairPrices)
+                    #Updating the weight of the requests (10 for the get_account call and 2 for the get_symbol_ticker() in the totalBtc section)
+                    config.weight +=2;
+                    #updating SPOT 
+                    self.tableOutput.emit(spotTrimmedList,"Spot",clientIndex,pairPrices)
 
-                crossMarginList = client.get_margin_account();
-                config.weight +=10;
-                totalBtc += float(crossMarginList['totalNetAssetOfBtc'])
-                crossMarginTrimmedList = [];
-                for item in crossMarginList['userAssets']:
-                    if float(item['free']) != 0 or float(item['locked']) != 0 or float(item['borrowed']) != 0 or float(item['interest']) != 0 or float(item['netAsset']) != 0:
-                        crossMarginTrimmedList.append(item);
-                        if item['asset'] == config.currentSymbol1:symbol1AvalibleCrossMargin=float(item['free']);
-                        if item['asset'] == config.currentSymbol2:symbol2AvalibleCrossMargin=float(item['free']);
-                    pass;
-                self.tableOutput.emit(crossMarginTrimmedList,"crossmargin",clientIndex,pairPrices)
+                    crossMarginList = client.get_margin_account();
+                    config.weight +=10;
+                    totalBtc += float(crossMarginList['totalNetAssetOfBtc'])
+                    crossMarginTrimmedList = [];
+                    for item in crossMarginList['userAssets']:
+                        if float(item['free']) != 0 or float(item['locked']) != 0 or float(item['borrowed']) != 0 or float(item['interest']) != 0 or float(item['netAsset']) != 0:
+                            crossMarginTrimmedList.append(item);
+                            if item['asset'] == config.currentSymbol1:symbol1AvalibleCrossMargin=float(item['free']);
+                            if item['asset'] == config.currentSymbol2:symbol2AvalibleCrossMargin=float(item['free']);
+                        pass;
+                    self.tableOutput.emit(crossMarginTrimmedList,"crossmargin",clientIndex,pairPrices)
 
-                isolatedMarginList = client.get_isolated_margin_account();
-                config.weight +=10;
-                totalBtc += float(isolatedMarginList['totalNetAssetOfBtc'])
-                isolatedMarginTrimmedList = [];                
-                for asset in isolatedMarginList['assets']:
-                    item = asset['baseAsset'];
-                    if float(item['free']) != 0 or float(item['locked']) != 0 or float(item['borrowed']) != 0 or float(item['interest']) != 0 or float(item['netAsset']) != 0:
-                        isolatedMarginTrimmedList.append(item);
-                        if item['asset'] == config.currentSymbol1:symbol1AvalibleIsolatedMargin=float(item['free']);
-                        if item['asset'] == config.currentSymbol2:symbol2AvalibleIsolatedMargin=float(item['free']);
-                    pass;
-                self.tableOutput.emit(isolatedMarginTrimmedList,"isolatedmargin",clientIndex,pairPrices)
-                
-                #print(f" Cross:{float(crossMarginList['totalNetAssetOfBtc'])} Isolated:{float(isolatedMarginList['totalAssetOfBtc'])}")
-                
-                config.clientSpotPortfolios[clientIndex] = spotTrimmedList;     
-                config.clientCrossMarginPortfolios[clientIndex] = crossMarginTrimmedList; 
-                config.clientIsolatedMarginPortfolios[clientIndex] = isolatedMarginTrimmedList; 
+                    isolatedMarginList = client.get_isolated_margin_account();
+                    config.weight +=10;
+                    totalBtc += float(isolatedMarginList['totalNetAssetOfBtc'])
+                    isolatedMarginTrimmedList = [];                
+                    for asset in isolatedMarginList['assets']:
+                        item = asset['baseAsset'];
+                        if float(item['free']) != 0 or float(item['locked']) != 0 or float(item['borrowed']) != 0 or float(item['interest']) != 0 or float(item['netAsset']) != 0:
+                            isolatedMarginTrimmedList.append(item);
+                            if item['asset'] == config.currentSymbol1:symbol1AvalibleIsolatedMargin=float(item['free']);
+                            if item['asset'] == config.currentSymbol2:symbol2AvalibleIsolatedMargin=float(item['free']);
+                        pass;
+                    self.tableOutput.emit(isolatedMarginTrimmedList,"isolatedmargin",clientIndex,pairPrices)
+                    
+                    #print(f" Cross:{float(crossMarginList['totalNetAssetOfBtc'])} Isolated:{float(isolatedMarginList['totalAssetOfBtc'])}")
+                    
+                    config.clientSpotPortfolios[clientIndex] = spotTrimmedList;     
+                    config.clientCrossMarginPortfolios[clientIndex] = crossMarginTrimmedList; 
+                    config.clientIsolatedMarginPortfolios[clientIndex] = isolatedMarginTrimmedList; 
 
-                #print ( f"{float(crossMarginList['totalAssetOfBtc'])} {float(isolatedMarginList['totalAssetOfBtc'])}")
-                #if(config.clientsymbol1AvalibleSpot[clientIndex] != float(symbol1AvalibleSpot) or config.symbol2AvalibleSpot != float(symbol2AvalibleSpot)):
-                symbol1Avalible = [symbol1AvalibleSpot,symbol1AvalibleCrossMargin,symbol1AvalibleIsolatedMargin]
-                symbol2Avalible = [symbol2AvalibleSpot,symbol2AvalibleCrossMargin,symbol2AvalibleIsolatedMargin]
-                self.output.emit(symbol1Avalible,symbol2Avalible,totalBtc,clientIndex);
-            await asyncio.sleep(5);
+                    #print ( f"{float(crossMarginList['totalAssetOfBtc'])} {float(isolatedMarginList['totalAssetOfBtc'])}")
+                    #if(config.clientsymbol1AvalibleSpot[clientIndex] != float(symbol1AvalibleSpot) or config.symbol2AvalibleSpot != float(symbol2AvalibleSpot)):
+                    symbol1Avalible = [symbol1AvalibleSpot,symbol1AvalibleCrossMargin,symbol1AvalibleIsolatedMargin]
+                    symbol2Avalible = [symbol2AvalibleSpot,symbol2AvalibleCrossMargin,symbol2AvalibleIsolatedMargin]
+                    self.output.emit(symbol1Avalible,symbol2Avalible,totalBtc,clientIndex);
+                await asyncio.sleep(5);
+            except Exception as ex:
+                self.ui.console.append(f"Exception thrown at PortfolioThread.PortfolioFetching() : \n{ex}")
             
     '''
     Function for calculating total BTC value 
@@ -100,22 +103,25 @@ class PortfolioThread(QThread):
         [0] = totalBtc of the spot account
         [1] = btc value of pairs for further calculation
     '''
-    def getTotalBtc(client,config,list):
-        totalBtc = 0.0;
-        prices = client.get_symbol_ticker()
-        valuesInBtc = {};
-        for asset in list:
-            symbol = asset['asset'];
-            completePair = f"{symbol}BTC";
-            #There is no btcusdt pair so we need to improvise and inverse the usdtbtc
-            if completePair != "USDTBTC":
-                pairPrice = prices[PortfolioThread.findDictionaryValue(prices,'symbol',completePair)]['price'];   
-            else :
-                pairPrice = 1/float(prices[PortfolioThread.findDictionaryValue(prices,'symbol',"BTCUSDT")]['price']);
-            totalBtc += float(pairPrice) * float(asset['free']);
-            valuesInBtc[symbol] = float(pairPrice) * float(asset['free']);
-            pass;
-        return [totalBtc,prices];
+    def getTotalBtc(client,config,list,ui):
+        try:
+            totalBtc = 0.0;
+            prices = client.get_symbol_ticker()
+            valuesInBtc = {};
+            for asset in list:
+                symbol = asset['asset'];
+                completePair = f"{symbol}BTC";
+                #There is no btcusdt pair so we need to improvise and inverse the usdtbtc
+                if completePair != "USDTBTC":
+                    pairPrice = prices[PortfolioThread.findDictionaryValue(prices,'symbol',completePair)]['price'];   
+                else :
+                    pairPrice = 1/float(prices[PortfolioThread.findDictionaryValue(prices,'symbol',"BTCUSDT")]['price']);
+                totalBtc += float(pairPrice) * float(asset['free']);
+                valuesInBtc[symbol] = float(pairPrice) * float(asset['free']);
+                pass;
+            return [totalBtc,prices];
+        except Exception as ex:
+            ui.console.append(f"Exception thrown at PortfolioThread.getTotalBtc() : \n{ex}")
          #float(client.get_margin_account()['totalAssetOfBtc'])
 
     def findDictionaryValue(list, key, value):

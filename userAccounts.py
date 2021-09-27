@@ -1,7 +1,4 @@
-from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5 import QtCore;
-from PyQt5 import QtWidgets,QtGui,QtCore;
-import asyncio;
+from PyQt5 import QtWidgets,QtGui;
 
 class userAccountsScrollArea():
     def __init__(self,ui,config) -> None:
