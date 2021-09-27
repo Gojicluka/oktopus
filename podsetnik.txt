@@ -1,0 +1,24 @@
+pyuic5 -x ui.ui -o ui.py
+
+pyuic5 -x forms/uifiles/pairsymbollist.ui -o forms/pairsymbollist.py
+
+multiproccessuj openOrdere mozda?
+
+probaj da ugasis socket
+
+kada kliknes lineedit treba da se zaustavi updatovanje
+
+quoteOrderQty zbog toga mozda ne radi margin order za market
+
+slideri ne rade na limit i stop limit
+
+try i catch blockovi
+
+komentari!!!!
+
+custom funkcija za % ordere
+ def get_max_position_available():
+    to_use = float(exchange.fetch_balance().get('USDT').get('free'))
+    price = float(exchange.fetchTicker('BTC/USDT').get('last'))
+    decide_position_to_use = to_use / price
+    return decide_position_to_use
