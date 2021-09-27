@@ -1,3 +1,0 @@
-potencionalni problemi
-menjanje modova ne radi jednom se pokazalo
-config.ini je odjednom bio prazan ne znam zasto moracu da saznam
